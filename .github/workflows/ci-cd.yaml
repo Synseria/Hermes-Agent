@@ -19,7 +19,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -30,7 +30,7 @@ jobs:
       version_fixed: ${{ steps.tagfix.outputs.version_fixed }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Lowercase image name
         id: img
@@ -58,17 +58,11 @@ jobs:
             echo "version_fixed=${RAW}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Set up QEMU (ARM support)
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: all
-          image: tonistiigi/binfmt:latest
-
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v4.0.0
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v4.1.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -79,7 +73,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           build-args: |
             HERMES_VERSION=${{ steps.tagfix.outputs.version_fixed }}
           tags: |

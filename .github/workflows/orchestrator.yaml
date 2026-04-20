@@ -19,13 +19,13 @@ permissions:
 jobs:
   # ÉTAPE 1 : DÉTECTION
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       update_needed: ${{ steps.set_version.outputs.update_needed }}
       version: ${{ steps.set_version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Déterminer la Version à utiliser
         id: set_version
@@ -62,10 +62,10 @@ jobs:
   # ÉTAPE 3 : MERGE (après validation du build)
   merge:
     needs: [check, test-dev]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Commit & Merge
         env:
@@ -89,16 +89,16 @@ jobs:
   # ÉTAPE 4 : PROMOTION (re-tag de l'image dev vers les tags prod, pas de rebuild)
   release-prod:
     needs: [check, test-dev, merge]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       packages: write
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v4.0.0
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v4.1.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -123,7 +123,7 @@ jobs:
           docker buildx imagetools inspect "${IMG}:v${MAJ}.${MIN}.${PATCH}"
 
       - name: GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v3.0.0
         with:
           tag_name: ${{ needs.test-dev.outputs.new_tag }}
           name: ${{ needs.test-dev.outputs.new_tag }}
