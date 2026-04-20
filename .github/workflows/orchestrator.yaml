@@ -1,0 +1,131 @@
+name: Orchestrator
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Tous les jours à 6h
+  workflow_dispatch:
+    inputs:
+      force_version:
+        description: 'Force le déploiement de cette version (ex: 2026.4.16). Si vide, vérifie NousResearch/hermes-agent.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  # ÉTAPE 1 : DÉTECTION
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      update_needed: ${{ steps.set_version.outputs.update_needed }}
+      version: ${{ steps.set_version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Déterminer la Version à utiliser
+        id: set_version
+        run: |
+          if [ "${{ github.event.inputs.force_version }}" != "" ]; then
+            FORCED_VERSION="${{ github.event.inputs.force_version }}"
+            echo "version=$FORCED_VERSION" >> $GITHUB_OUTPUT
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Déploiement Forcé de la version $FORCED_VERSION."
+            exit 0
+          fi
+
+          LATEST=$(curl -s https://api.github.com/repos/NousResearch/hermes-agent/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          CURRENT=$(cat VERSION 2>/dev/null || echo "0.0.0")
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "version=$LATEST" >> $GITHUB_OUTPUT
+            echo "🚀 Nouvelle version détectée : $LATEST"
+          else
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+            echo "✅ À jour."
+          fi
+
+  # ÉTAPE 2 : BUILD DEV MULTI-ARCH (amd64 + arm64 en parallèle natif)
+  test-dev:
+    needs: check
+    if: needs.check.outputs.update_needed == 'true'
+    uses: ./.github/workflows/ci-cd.yaml
+    with:
+      version: ${{ needs.check.outputs.version }}
+    secrets: inherit
+
+  # ÉTAPE 3 : MERGE (après validation du build)
+  merge:
+    needs: [check, test-dev]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Commit & Merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.check.outputs.version }}"
+          BRANCH="auto-$VERSION"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          echo "$VERSION" > VERSION
+          git add VERSION
+          git commit -m "chore: update to $VERSION"
+          git push origin "$BRANCH" --force
+
+          PR=$(gh pr create --title "Bump $VERSION" --body "Auto-validated." --base master --head "$BRANCH")
+          gh pr merge "$PR" --merge --delete-branch
+
+  # ÉTAPE 4 : PROMOTION (re-tag de l'image dev vers les tags prod, pas de rebuild)
+  release-prod:
+    needs: [check, test-dev, merge]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote dev image to prod tags (imagetools re-tag, pas de rebuild)
+        run: |
+          IMG="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          VER="${{ needs.test-dev.outputs.version_fixed }}"
+          IFS='.' read -r MAJ MIN PATCH <<< "$VER"
+
+          echo "Promotion de ${IMG}:dev-${VER} vers tags prod"
+
+          docker buildx imagetools create \
+            --tag "${IMG}:latest" \
+            --tag "${IMG}:stable" \
+            --tag "${IMG}:v${MAJ}.${MIN}.${PATCH}" \
+            --tag "${IMG}:v${MAJ}.${MIN}" \
+            --tag "${IMG}:v${MAJ}" \
+            "${IMG}:dev-${VER}"
+
+          docker buildx imagetools inspect "${IMG}:v${MAJ}.${MIN}.${PATCH}"
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.test-dev.outputs.new_tag }}
+          name: ${{ needs.test-dev.outputs.new_tag }}
+          generate_release_notes: true
+          make_latest: true

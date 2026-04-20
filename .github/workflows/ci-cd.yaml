@@ -1,0 +1,92 @@
+name: CI/CD Service
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+    outputs:
+      version_fixed:
+        description: "Version used (potentiellement incrémentée si le tag existe déjà)"
+        value: ${{ jobs.build.outputs.version_fixed }}
+      new_tag:
+        description: "Git tag name (vX.Y.Z)"
+        value: ${{ jobs.build.outputs.new_tag }}
+      image:
+        description: "Image name in lowercase (owner/repo)"
+        value: ${{ jobs.build.outputs.image }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    outputs:
+      image: ${{ steps.img.outputs.image }}
+      new_tag: ${{ steps.tagfix.outputs.new_tag }}
+      version_fixed: ${{ steps.tagfix.outputs.version_fixed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Lowercase image name
+        id: img
+        run: |
+          IMAGE=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=${IMAGE}" >> $GITHUB_OUTPUT
+          echo "Image target: ghcr.io/${IMAGE}"
+
+      - name: Check & increment tag if exists
+        id: tagfix
+        run: |
+          RAW="${{ inputs.version }}"
+          TAG="v${RAW}"
+
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+            echo "Tag ${TAG} existe déjà, incrément du patch."
+            IFS='.' read -r MAJ MIN PATCH <<< "$RAW"
+            PATCH=$((PATCH+1))
+            NEW="${MAJ}.${MIN}.${PATCH}"
+            echo "new_tag=v${NEW}" >> $GITHUB_OUTPUT
+            echo "version_fixed=${NEW}" >> $GITHUB_OUTPUT
+          else
+            echo "Tag ${TAG} libre, on le garde."
+            echo "new_tag=${TAG}" >> $GITHUB_OUTPUT
+            echo "version_fixed=${RAW}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU (ARM support)
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: all
+          image: tonistiigi/binfmt:latest
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push multi-arch (dev tags)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            HERMES_VERSION=${{ steps.tagfix.outputs.version_fixed }}
+          tags: |
+            ghcr.io/${{ steps.img.outputs.image }}:dev
+            ghcr.io/${{ steps.img.outputs.image }}:dev-${{ steps.tagfix.outputs.version_fixed }}
+
+      - name: Inspect
+        run: |
+          docker buildx imagetools inspect \
+            "ghcr.io/${{ steps.img.outputs.image }}:dev-${{ steps.tagfix.outputs.version_fixed }}"
