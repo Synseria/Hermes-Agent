@@ -17,7 +17,7 @@
 
 FROM ghcr.io/astral-sh/uv:0.11.7-python3.13-trixie AS uv_source
 
-FROM debian:13.4
+FROM debian:13.5
 
 ARG HERMES_VERSION
 
