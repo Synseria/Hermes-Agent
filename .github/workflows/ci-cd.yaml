@@ -30,7 +30,7 @@ jobs:
       version_fixed: ${{ steps.tagfix.outputs.version_fixed }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6.0.3
 
       - name: Lowercase image name
         id: img
