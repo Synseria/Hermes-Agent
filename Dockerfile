@@ -15,7 +15,7 @@
 #     - emptyDir medium=Memory sur /dev/shm (Chromium ~256Mi)
 # ==============================================================================
 
-FROM ghcr.io/astral-sh/uv:0.11.7-python3.13-trixie AS uv_source
+FROM ghcr.io/astral-sh/uv:0.11.21-python3.13-trixie AS uv_source
 
 FROM debian:13.4
 
