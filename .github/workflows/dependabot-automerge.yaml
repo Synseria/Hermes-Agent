@@ -10,7 +10,11 @@ permissions:
 
 jobs:
   automerge:
-    if: github.actor == 'dependabot[bot]'
+    # Ne jamais checkouter la branche de la PR dans ce job : pull_request_target
+    # dispose d'un token en écriture, seul l'appel gh est exécuté ici.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.base.ref == 'master'
     runs-on: ubuntu-24.04
     steps:
       - name: Merger la PR Dependabot
