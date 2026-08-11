@@ -17,6 +17,10 @@
 
 FROM ghcr.io/astral-sh/uv:0.12.3-python3.13-trixie AS uv_source
 
+# Node 22 officiel : Debian trixie ne fournit que nodejs 20 / npm 9,
+# incompatibles avec les engines de hermes-agent (node >=22.22, npm >=11.17 ou <11.10)
+FROM node:22-trixie-slim AS node_source
+
 FROM debian:13.6
 
 ARG HERMES_VERSION
@@ -32,9 +36,15 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential gcc python3 python3-dev libffi-dev \
-        nodejs npm ripgrep ffmpeg tini procps \
+        ripgrep ffmpeg tini procps \
         git curl bash sed ca-certificates && \
     rm -rf /var/lib/apt/lists/*
+
+COPY --from=node_source /usr/local/bin/node /usr/local/bin/node
+COPY --from=node_source /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+    ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+    node --version && npm --version
 
 RUN useradd -u 1001 -m -d /opt/data -s /bin/bash hermes
 
