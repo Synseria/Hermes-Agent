@@ -19,7 +19,7 @@ FROM ghcr.io/astral-sh/uv:0.12.3-python3.13-trixie AS uv_source
 
 # Node 22 officiel : Debian trixie ne fournit que nodejs 20 / npm 9,
 # incompatibles avec les engines de hermes-agent (node >=22.22, npm >=11.17 ou <11.10)
-FROM node:22-trixie-slim AS node_source
+FROM node:25-trixie-slim AS node_source
 
 FROM debian:13.6
 
