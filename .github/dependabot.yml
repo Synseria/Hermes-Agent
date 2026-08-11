@@ -6,6 +6,10 @@ updates:
     schedule:
       interval: "daily"
       time: "12:00"
+    # Attendre 7 jours après publication amont avant de proposer le bump :
+    # laisse le temps à une version compromise ou cassée d'être retirée.
+    cooldown:
+      default-days: 7
     labels:
       - "dependencies"
       - "github-actions"
@@ -14,6 +18,8 @@ updates:
     schedule:
       interval: "daily"
       time: "12:00"
+    cooldown:
+      default-days: 7
     labels:
       - "dependencies"
       - "docker"
