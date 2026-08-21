@@ -15,7 +15,7 @@
 #     - emptyDir medium=Memory sur /dev/shm (Chromium ~256Mi)
 # ==============================================================================
 
-FROM ghcr.io/astral-sh/uv:0.12.3-python3.13-trixie AS uv_source
+FROM ghcr.io/astral-sh/uv:0.12.4-python3.13-trixie AS uv_source
 
 # Node 22 officiel : Debian trixie ne fournit que nodejs 20 / npm 9,
 # incompatibles avec les engines de hermes-agent (node >=22.22, npm >=11.17 ou <11.10)
