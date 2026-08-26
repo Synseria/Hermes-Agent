@@ -31,6 +31,12 @@ ARG HERMES_VERSION
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    # CRITIQUE : sans ce chemin, uv télécharge l'interpréteur requis par
+    # l'upstream (ex. CPython 3.11) dans ~/.local/share/uv = /opt/data,
+    # masqué au runtime par le volume monté sur /opt/data → symlink du venv
+    # pendu → fallback silencieux sur le python système sans dépendances
+    # (ModuleNotFoundError au démarrage).
+    UV_PYTHON_INSTALL_DIR=/opt/hermes/.uv-python \
     PLAYWRIGHT_BROWSERS_PATH=/opt/hermes/.playwright \
     HERMES_WEB_DIST=/opt/hermes/hermes_cli/web_dist \
     HERMES_HOME=/opt/data \
