@@ -20,6 +20,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
+    # Un build sain prend ~20-30 min ; sans ce plafond, un hang consomme les
+    # 6 h du timeout GitHub par défaut (cf. incident node 26, 13-26 août).
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write

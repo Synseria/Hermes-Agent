@@ -23,3 +23,8 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    ignore:
+      # Node : uniquement les LTS (versions paires). Le bump auto vers node 26
+      # (impair, non-LTS) a fait pendre les builds pendant 13 jours (cf. Dockerfile).
+      - dependency-name: "node"
+        versions: ["25.x", "27.x", "29.x", "31.x"]
