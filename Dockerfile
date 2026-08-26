@@ -23,7 +23,7 @@ FROM ghcr.io/astral-sh/uv:0.12.5-python3.13-trixie AS uv_source
 # non-LTS) a fait pendre `npx playwright install` et bloqué tous les builds
 # du 13 au 26 août (timeout 6 h par run). Versions impaires ignorées via
 # .github/dependabot.yml.
-FROM node:24-trixie-slim AS node_source
+FROM node:25-trixie-slim AS node_source
 
 FROM debian:13.6
 
