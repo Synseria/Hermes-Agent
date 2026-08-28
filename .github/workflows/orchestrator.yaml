@@ -80,11 +80,17 @@ jobs:
           git checkout -b "$BRANCH"
           echo "$VERSION" > VERSION
           git add VERSION
-          git commit -m "chore: update to $VERSION"
-          git push origin "$BRANCH" --force
-
-          PR=$(gh pr create --title "Bump $VERSION" --body "Auto-validated." --base master --head "$BRANCH")
-          gh pr merge "$PR" --merge --delete-branch
+          # Idempotent : lors d'un re-run (ex. rebuild d'une même version après
+          # correctif du Dockerfile), VERSION est déjà à jour — un commit vide
+          # faisait échouer le job et sautait la promotion des tags prod.
+          if git diff --cached --quiet; then
+            echo "VERSION déjà à $VERSION — rien à committer, on continue."
+          else
+            git commit -m "chore: update to $VERSION"
+            git push origin "$BRANCH" --force
+            PR=$(gh pr create --title "Bump $VERSION" --body "Auto-validated." --base master --head "$BRANCH")
+            gh pr merge "$PR" --merge --delete-branch
+          fi
 
   # ÉTAPE 4 : PROMOTION (re-tag de l'image dev vers les tags prod, pas de rebuild)
   release-prod:
