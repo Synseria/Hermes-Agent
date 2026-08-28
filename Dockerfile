@@ -54,6 +54,9 @@ COPY --from=node_source /usr/local/bin/node /usr/local/bin/node
 COPY --from=node_source /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
     ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+    # Les engines upstream exigent npm <11.10 || >=11.17 ; node 24 LTS embarque
+    # un npm dans la plage exclue → on met npm à jour indépendamment de node.
+    npm install -g 'npm@>=11.17.0' && \
     node --version && npm --version
 
 RUN useradd -u 1001 -m -d /opt/data -s /bin/bash hermes
