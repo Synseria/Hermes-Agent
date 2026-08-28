@@ -24,7 +24,9 @@ updates:
       - "dependencies"
       - "docker"
     ignore:
-      # Node : uniquement les LTS (versions paires). Le bump auto vers node 26
-      # (impair, non-LTS) a fait pendre les builds pendant 13 jours (cf. Dockerfile).
+      # Node : jamais de bump de majeure automatique. Le bump auto vers node 26
+      # a fait pendre les builds pendant 13 jours, et la syntaxe `versions:`
+      # ne matche pas les tags Docker (25-trixie-slim) — d'où update-types.
+      # Les montées de majeure node se font à la main, LTS uniquement.
       - dependency-name: "node"
-        versions: ["25.x", "27.x", "29.x", "31.x"]
+        update-types: ["version-update:semver-major"]
