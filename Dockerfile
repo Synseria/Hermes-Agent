@@ -27,7 +27,7 @@ FROM ghcr.io/astral-sh/uv:0.12.19-python3.13-trixie AS uv_source
 # engines des dépendances (nanoid ^22||^24||>=26). Node 24 LTS est le seul viable.
 FROM node:24-trixie-slim AS node_source
 
-FROM debian:13.6
+FROM debian:13.7
 
 ARG HERMES_VERSION
 
