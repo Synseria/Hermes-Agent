@@ -129,7 +129,7 @@ jobs:
           docker buildx imagetools inspect "${IMG}:v${MAJ}.${MIN}.${PATCH}"
 
       - name: GitHub Release
-        uses: softprops/action-gh-release@v3.0.3
+        uses: softprops/action-gh-release@v3.0.4
         with:
           tag_name: ${{ needs.test-dev.outputs.new_tag }}
           name: ${{ needs.test-dev.outputs.new_tag }}
